@@ -13,22 +13,38 @@ import {DOCUMENT} from './dom_tokens';
 @Injectable()
 export class SharedStylesHost {
   /** @internal */
-  protected _stylesSet = new Set<string>();
+  protected _styles = new Map<string, number>();
 
   addStyles(styles: string[]): void {
     const additions = new Set<string>();
     styles.forEach(style => {
-      if (!this._stylesSet.has(style)) {
-        this._stylesSet.add(style);
+      if (this._styles.has(style)) {
+        const refCount = this._styles.get(style) + 1;
+        this._styles.set(style, refCount);
+      } else {
+        this._styles.set(style, 1);
         additions.add(style);
       }
     });
     this.onStylesAdded(additions);
   }
 
+  removeStyles(styles: string[]): void {
+    styles.forEach(style => {
+      const refCount = this._styles.get(style) - 1;
+      if (refCount === 0) {
+        this._styles.delete(style);
+        getDOM().remove(this._styleNodes.get(style));
+        this._styleNodes.delete(style);
+      } else {
+        this._styles.set(style, refCount);
+      }
+    });
+  }
+
   onStylesAdded(additions: Set<string>): void {}
 
-  getAllStyles(): string[] { return Array.from(this._stylesSet); }
+  getAllStyles(): string[] { return Array.from(this._styles.keys()); }
 }
 
 @Injectable()
