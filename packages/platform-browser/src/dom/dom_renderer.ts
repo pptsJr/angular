@@ -64,7 +64,7 @@ export class DomRendererFactory2 implements RendererFactory2 {
   private defaultRenderer: Renderer2;
 
   constructor(private eventManager: EventManager, private sharedStylesHost: DomSharedStylesHost) {
-    this.defaultRenderer = new DefaultDomRenderer2(eventManager);
+    this.defaultRenderer = new DefaultDomRenderer2(eventManager, sharedStylesHost);
   };
 
   createRenderer(element: any, type: RendererType2|null): Renderer2 {
@@ -87,7 +87,7 @@ export class DomRendererFactory2 implements RendererFactory2 {
       default: {
         if (!this.rendererByCompId.has(type.id)) {
           const styles = flattenStyles(type.id, type.styles, []);
-          this.sharedStylesHost.addStyles(styles);
+          this.defaultRenderer.addStyles(styles);
           this.rendererByCompId.set(type.id, this.defaultRenderer);
         }
         return this.defaultRenderer;
@@ -100,11 +100,13 @@ export class DomRendererFactory2 implements RendererFactory2 {
 }
 
 class DefaultDomRenderer2 implements Renderer2 {
+  private _styles: string[] = [];
+     
   data: {[key: string]: any} = Object.create(null);
+  
+  constructor(private eventManager: EventManager, private sharedStylesHost: DomSharedStylesHost) {}
 
-  constructor(private eventManager: EventManager) {}
-
-  destroy(): void {}
+  destroy(): void { this.sharedStylesHost.removeStyles(this._styles); }
 
   destroyNode: null;
 
@@ -214,6 +216,11 @@ class DefaultDomRenderer2 implements Renderer2 {
     }
     return <() => void>this.eventManager.addEventListener(
                target, event, decoratePreventDefault(callback)) as() => void;
+  }
+
+  addStyles(styles: string[]): void {
+    this._styles.push(styles);
+    this.sharedStylesHost.addStyles(styles);
   }
 }
 
